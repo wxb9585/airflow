@@ -332,3 +332,60 @@ def test_is_sqlalchemy_v1(mock_version, expected_result):
     with mock.patch("airflow.utils.sqlalchemy.metadata") as mock_metadata:
         mock_metadata.version.return_value = mock_version
         assert is_sqlalchemy_v1() == expected_result
+
+
+class TestWithRowLocksTiDB:
+    @mock.patch("airflow.settings.IS_TIDB", True)
+    @mock.patch("airflow.utils.sqlalchemy.USE_ROW_LEVEL_LOCKING", True)
+    def test_skip_locked_degraded_on_tidb(self):
+        """When IS_TIDB=True, skip_locked should be silently dropped."""
+        from airflow.utils.sqlalchemy import with_row_locks
+
+        mock_query = MagicMock()
+        mock_session = MagicMock()
+        mock_dialect = MagicMock()
+        mock_dialect.name = "mysql"
+        mock_dialect.supports_for_update_of = True
+        mock_session.bind.dialect = mock_dialect
+
+        with_row_locks(mock_query, mock_session, skip_locked=True, key_share=False)
+
+        mock_query.with_for_update.assert_called_once()
+        call_kwargs = mock_query.with_for_update.call_args[1]
+        assert "skip_locked" not in call_kwargs
+
+    @mock.patch("airflow.settings.IS_TIDB", True)
+    @mock.patch("airflow.utils.sqlalchemy.USE_ROW_LEVEL_LOCKING", True)
+    def test_nowait_preserved_on_tidb(self):
+        """When IS_TIDB=True, nowait should still be passed through."""
+        from airflow.utils.sqlalchemy import with_row_locks
+
+        mock_query = MagicMock()
+        mock_session = MagicMock()
+        mock_dialect = MagicMock()
+        mock_dialect.name = "mysql"
+        mock_dialect.supports_for_update_of = True
+        mock_session.bind.dialect = mock_dialect
+
+        with_row_locks(mock_query, mock_session, nowait=True, skip_locked=False, key_share=False)
+
+        call_kwargs = mock_query.with_for_update.call_args[1]
+        assert call_kwargs.get("nowait") is True
+
+    @mock.patch("airflow.settings.IS_TIDB", False)
+    @mock.patch("airflow.utils.sqlalchemy.USE_ROW_LEVEL_LOCKING", True)
+    def test_skip_locked_preserved_on_mysql(self):
+        """When IS_TIDB=False, skip_locked should be passed through normally."""
+        from airflow.utils.sqlalchemy import with_row_locks
+
+        mock_query = MagicMock()
+        mock_session = MagicMock()
+        mock_dialect = MagicMock()
+        mock_dialect.name = "mysql"
+        mock_dialect.supports_for_update_of = True
+        mock_session.bind.dialect = mock_dialect
+
+        with_row_locks(mock_query, mock_session, skip_locked=True, key_share=False)
+
+        call_kwargs = mock_query.with_for_update.call_args[1]
+        assert call_kwargs.get("skip_locked") is True

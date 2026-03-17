@@ -349,7 +349,13 @@ def with_row_locks(
     if nowait:
         kwargs["nowait"] = True
     if skip_locked:
-        kwargs["skip_locked"] = True
+        from airflow.settings import IS_TIDB
+
+        if IS_TIDB:
+            # TiDB v7.3 does not support SKIP LOCKED; degrade to plain FOR UPDATE
+            pass
+        else:
+            kwargs["skip_locked"] = True
     if key_share:
         kwargs["key_share"] = True
     return query.with_for_update(**kwargs)
