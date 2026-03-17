@@ -66,7 +66,7 @@ def get_id_collation_args():
     collation = conf.get("database", "sql_engine_collation_for_ids", fallback=None)
     if collation:
         return {"collation": collation}
-    # Automatically use utf8mb3_bin collation for mysql
+    # Automatically use utf8mb4_bin collation for mysql/tidb
     # This is backwards-compatible. All our IDS are ASCII anyway so even if
     # we migrate from previously installed database with different collation and we end up mixture of
     # COLLATIONS, it's not a problem whatsoever (and we keep it small enough so that our indexes
@@ -78,7 +78,7 @@ def get_id_collation_args():
     # parameters, so we use the connection
     conn = conf.get("database", "sql_alchemy_conn", fallback="")
     if conn.startswith(("mysql", "mariadb")):
-        return {"collation": "utf8mb3_bin"}
+        return {"collation": "utf8mb4_bin"}
     return {}
 
 

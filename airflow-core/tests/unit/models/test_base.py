@@ -29,9 +29,9 @@ pytestmark = pytest.mark.db_test
     ("dsn", "expected", "extra"),
     [
         pytest.param("postgresql://host/the_database", {}, {}, id="postgres"),
-        pytest.param("mysql://host/the_database", {"collation": "utf8mb3_bin"}, {}, id="mysql"),
+        pytest.param("mysql://host/the_database", {"collation": "utf8mb4_bin"}, {}, id="mysql"),
         pytest.param(
-            "mysql+pymysql://host/the_database", {"collation": "utf8mb3_bin"}, {}, id="mysql+pymysql"
+            "mysql+pymysql://host/the_database", {"collation": "utf8mb4_bin"}, {}, id="mysql+pymysql"
         ),
         pytest.param(
             "mysql://host/the_database",
