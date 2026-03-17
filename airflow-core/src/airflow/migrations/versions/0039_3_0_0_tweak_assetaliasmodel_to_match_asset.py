@@ -50,7 +50,7 @@ depends_on = None
 airflow_version = "3.0.0"
 
 _STRING_COLUMN_TYPE = sa.String(length=1500).with_variant(
-    sa.String(length=1500, collation="latin1_general_cs"),
+    sa.String(length=1500, collation="latin1_bin"),
     "mysql",
 )
 
@@ -76,7 +76,7 @@ def downgrade():
         batch_op.alter_column(
             "name",
             type_=sa.String(length=3000).with_variant(
-                sa.String(length=3000, collation="latin1_general_cs"),
+                sa.String(length=3000, collation="latin1_bin"),
                 "mysql",
             ),
             nullable=False,

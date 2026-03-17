@@ -62,28 +62,19 @@ def disable_sqlite_fkeys(op):
 
 
 def mysql_drop_foreignkey_if_exists(constraint_name, table_name, op):
-    """Older Mysql versions do not support DROP FOREIGN KEY IF EXISTS."""
-    op.execute(f"""
-    CREATE PROCEDURE DropForeignKeyIfExists()
-    BEGIN
-        IF EXISTS (
-            SELECT 1
-            FROM information_schema.TABLE_CONSTRAINTS
-            WHERE
-                CONSTRAINT_SCHEMA = DATABASE() AND
-                TABLE_NAME = '{table_name}' AND
-                CONSTRAINT_NAME = '{constraint_name}' AND
-                CONSTRAINT_TYPE = 'FOREIGN KEY'
-        ) THEN
-            ALTER TABLE {table_name}
-            DROP CONSTRAINT {constraint_name};
-        ELSE
-            SELECT 1;
-        END IF;
-    END;
-    CALL DropForeignKeyIfExists();
-    DROP PROCEDURE DropForeignKeyIfExists;
-    """)
+    """Drop a foreign key constraint if it exists, compatible with TiDB (no stored procedures)."""
+    conn = op.get_bind()
+    result = conn.execute(
+        text(
+            "SELECT 1 FROM information_schema.TABLE_CONSTRAINTS "
+            "WHERE CONSTRAINT_SCHEMA = DATABASE() "
+            f"AND TABLE_NAME = '{table_name}' "
+            f"AND CONSTRAINT_NAME = '{constraint_name}' "
+            "AND CONSTRAINT_TYPE = 'FOREIGN KEY'"
+        )
+    ).fetchone()
+    if result:
+        op.execute(f"ALTER TABLE {table_name} DROP CONSTRAINT {constraint_name}")
 
 
 def mysql_drop_index_if_exists(index_name, table_name, op):

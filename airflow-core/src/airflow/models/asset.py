@@ -163,7 +163,7 @@ class AssetAliasModel(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -175,7 +175,7 @@ class AssetAliasModel(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -239,7 +239,7 @@ class AssetModel(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -251,7 +251,7 @@ class AssetModel(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -263,7 +263,7 @@ class AssetModel(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -345,7 +345,7 @@ class AssetActive(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -357,7 +357,7 @@ class AssetActive(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -393,7 +393,7 @@ class DagScheduleAssetNameReference(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),
@@ -439,7 +439,7 @@ class DagScheduleAssetUriReference(Base):
                 length=1500,
                 # latin1 allows for more indexed length in mysql
                 # and this field should only be ascii chars
-                collation="latin1_general_cs",
+                collation="latin1_bin",
             ),
             "mysql",
         ),

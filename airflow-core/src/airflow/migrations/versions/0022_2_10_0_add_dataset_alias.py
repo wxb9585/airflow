@@ -46,7 +46,7 @@ def upgrade():
         sa.Column(
             "name",
             sa.String(length=3000).with_variant(
-                sa.String(length=3000, collation="latin1_general_cs"), "mysql"
+                sa.String(length=3000, collation="latin1_bin"), "mysql"
             ),
             nullable=False,
         ),

@@ -33,6 +33,28 @@ from sqlalchemy.dialects import postgresql
 
 from airflow.configuration import conf
 
+
+def _python_uuid7_from_timestamp(ts):
+    """Generate a UUID v7 from a datetime timestamp, pure Python implementation."""
+    import os
+    import struct
+
+    if ts is None:
+        import datetime
+
+        ts = datetime.datetime.now(tz=datetime.timezone.utc)
+    unix_ms = int(ts.timestamp() * 1000)
+    rand_bytes = os.urandom(10)
+    # Build 16 bytes: 6 bytes timestamp + 10 bytes random with version/variant bits
+    time_bytes = struct.pack(">Q", unix_ms)[-6:]  # last 6 bytes of 8-byte big-endian
+    uuid_bytes = bytearray(time_bytes + rand_bytes)
+    # Set version 7 (bits 48-51)
+    uuid_bytes[6] = (uuid_bytes[6] & 0x0F) | 0x70
+    # Set variant (bits 64-65) to 10
+    uuid_bytes[8] = (uuid_bytes[8] & 0x3F) | 0x80
+    hex_str = uuid_bytes.hex()
+    return f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
+
 # revision identifiers, used by Alembic.
 revision = "d59cbbef95eb"
 down_revision = "05234396c6fc"
@@ -237,17 +259,39 @@ def upgrade():
         op.execute("ALTER TABLE IF EXISTS task_instance DROP CONSTRAINT task_instance_pkey CASCADE")
 
     elif dialect_name == "mysql":
-        op.execute(mysql_uuid7_fn)
+        # Use Python-based UUID v7 generation instead of MySQL UDF (TiDB does not support UDFs)
+        batch_size = conf.getint("database", "migration_batch_size", fallback=1000)
+        batch_num = 0
+        while True:
+            batch_num += 1
+            print(f"processing batch {batch_num}")
+            rows = conn.execute(
+                text(
+                    "SELECT dag_id, task_id, run_id, map_index, "
+                    "COALESCE(queued_dttm, start_date, NOW(3)) AS ts "
+                    "FROM task_instance WHERE id IS NULL LIMIT :batch_size"
+                ).bindparams(batch_size=batch_size)
+            ).fetchall()
+            if not rows:
+                break
+            for row in rows:
+                uuid_val = _python_uuid7_from_timestamp(row.ts)
+                conn.execute(
+                    text(
+                        "UPDATE task_instance SET id = :uuid_val "
+                        "WHERE dag_id = :dag_id AND task_id = :task_id "
+                        "AND run_id = :run_id AND map_index = :map_index AND id IS NULL"
+                    ),
+                    {
+                        "uuid_val": uuid_val,
+                        "dag_id": row.dag_id,
+                        "task_id": row.task_id,
+                        "run_id": row.run_id,
+                        "map_index": row.map_index,
+                    },
+                )
+            print(f"Migrated {len(rows)} task_instance rows in this batch...")
 
-        # Migrate existing rows with UUID v7
-        op.execute("""
-            UPDATE task_instance
-            SET id = uuid_generate_v7(coalesce(queued_dttm, start_date, NOW(3)))
-            WHERE id IS NULL
-        """)
-
-        # Drop this function as it is no longer needed
-        op.execute(mysql_uuid7_fn_drop)
         for fk in ti_fk_constraints:
             op.drop_constraint(fk["fk"], fk["table"], type_="foreignkey")
         with op.batch_alter_table("task_instance") as batch_op:

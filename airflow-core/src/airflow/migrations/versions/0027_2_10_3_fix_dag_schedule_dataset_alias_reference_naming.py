@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import text
 
 from airflow.migrations.utils import mysql_drop_foreignkey_if_exists
 from airflow.models import ID_LEN
@@ -45,29 +46,23 @@ airflow_version = "2.10.3"
 def mysql_create_foreignkey_if_not_exists(
     constraint_name, table_name, column_name, ref_table, ref_column, op
 ):
-    op.execute(f"""
-    CREATE PROCEDURE create_foreign_key_if_not_exists()
-    BEGIN
-        IF EXISTS (
-            SELECT 1
-            FROM information_schema.TABLE_CONSTRAINTS
-            WHERE
-                CONSTRAINT_SCHEMA = DATABASE() AND
-                TABLE_NAME = '{table_name}' AND
-                CONSTRAINT_NAME = '{constraint_name}' AND
-                CONSTRAINT_TYPE = 'FOREIGN KEY'
-        ) THEN
-            SELECT 1;
-        ELSE
+    conn = op.get_bind()
+    result = conn.execute(text(f"""
+        SELECT 1
+        FROM information_schema.TABLE_CONSTRAINTS
+        WHERE
+            CONSTRAINT_SCHEMA = DATABASE() AND
+            TABLE_NAME = '{table_name}' AND
+            CONSTRAINT_NAME = '{constraint_name}' AND
+            CONSTRAINT_TYPE = 'FOREIGN KEY'
+    """)).fetchone()
+    if not result:
+        op.execute(f"""
             ALTER TABLE {table_name}
             ADD CONSTRAINT {constraint_name} FOREIGN KEY ({column_name})
             REFERENCES {ref_table}({ref_column})
-            ON DELETE CASCADE;
-        END IF;
-    END;
-    CALL create_foreign_key_if_not_exists();
-    DROP PROCEDURE create_foreign_key_if_not_exists;
-    """)
+            ON DELETE CASCADE
+        """)
 
 
 def postgres_create_foreignkey_if_not_exists(
