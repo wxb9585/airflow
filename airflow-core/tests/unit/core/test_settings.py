@@ -256,3 +256,38 @@ class TestEngineArgs:
         engine_args = settings.prepare_engine_args()
 
         assert "encoding" not in engine_args
+
+
+class TestTiDBDetection:
+    def test_detect_tidb_returns_true_for_tidb(self):
+        """IS_TIDB should be True when VERSION() contains 'TiDB'."""
+        from airflow.settings import _detect_tidb
+
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.scalar.return_value = "5.7.25-TiDB-v7.3.0"
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        assert _detect_tidb(mock_engine) is True
+
+    def test_detect_tidb_returns_false_for_mysql(self):
+        """IS_TIDB should be False for regular MySQL."""
+        from airflow.settings import _detect_tidb
+
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.scalar.return_value = "8.0.32"
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+        assert _detect_tidb(mock_engine) is False
+
+    def test_detect_tidb_returns_false_on_error(self):
+        """IS_TIDB should be False if VERSION() query fails."""
+        from airflow.settings import _detect_tidb
+
+        mock_engine = MagicMock()
+        mock_engine.connect.side_effect = Exception("connection failed")
+
+        assert _detect_tidb(mock_engine) is False

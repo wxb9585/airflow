@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pluggy
 from packaging.version import Version
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession as SAAsyncSession, create_async_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -52,6 +52,8 @@ try:
     USE_PSYCOPG3 = is_psycopg3 and not is_sqlalchemy_v1()
 except (ImportError, ModuleNotFoundError):
     USE_PSYCOPG3 = False
+
+IS_TIDB: bool = False
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -370,6 +372,16 @@ def _configure_async_session() -> None:
     )
 
 
+def _detect_tidb(eng) -> bool:
+    """Detect if the database is TiDB by checking VERSION() output."""
+    try:
+        with eng.connect() as conn:
+            version = conn.execute(text("SELECT VERSION()")).scalar()
+            return version is not None and "TiDB" in version
+    except Exception:
+        return False
+
+
 def configure_orm(disable_connection_pool=False, pool_class=None):
     """Configure ORM using SQLAlchemy."""
     from airflow._shared.secrets_masker import mask_secret
@@ -410,6 +422,11 @@ def configure_orm(disable_connection_pool=False, pool_class=None):
     _configure_async_session()
     mask_secret(engine.url.password)
     setup_event_handlers(engine)
+
+    global IS_TIDB
+    IS_TIDB = _detect_tidb(engine)
+    if IS_TIDB:
+        log.info("TiDB detected as database backend")
 
     if conf.has_option("database", "sql_alchemy_session_maker"):
         _session_maker = conf.getimport("database", "sql_alchemy_session_maker")
