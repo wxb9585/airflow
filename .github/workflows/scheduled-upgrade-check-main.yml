@@ -1,12 +1,13 @@
 # GitHub Actions workflow disabled in fork.
 # Restore from upstream if CI is needed again.
 ---
-name: "[main] Scheduled CI upgrade check"
+name: "Disabled: scheduled-upgrade-check-main.yml"
 on:
   workflow_dispatch:
 
 jobs:
   disabled:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - run: echo "This workflow is disabled in this fork."
